@@ -1,4 +1,8 @@
-import { mysqlChannelIntegration, detectOrchestrionSetup } from '@sentry/server-utils/orchestrion';
+import {
+  mysqlChannelIntegration,
+  vercelAiChannelIntegration,
+  detectOrchestrionSetup,
+} from '@sentry/server-utils/orchestrion';
 import { registerDiagnosticsChannelInjection } from '@sentry/server-utils/orchestrion/register';
 import type { DiagnosticsChannelInjection } from './diagnosticsChannelInjection';
 import { setDiagnosticsChannelInjectionLoader } from './diagnosticsChannelInjection';
@@ -38,8 +42,8 @@ import { setDiagnosticsChannelInjectionLoader } from './diagnosticsChannelInject
 export function experimentalUseDiagnosticsChannelInjection(): void {
   setDiagnosticsChannelInjectionLoader(
     (): DiagnosticsChannelInjection => ({
-      integrations: [mysqlChannelIntegration()],
-      replacedOtelIntegrationNames: ['Mysql'],
+      integrations: [mysqlChannelIntegration(), vercelAiChannelIntegration()],
+      replacedOtelIntegrationNames: ['Mysql', 'VercelAI'],
       register: registerDiagnosticsChannelInjection,
       detect: detectOrchestrionSetup,
     }),

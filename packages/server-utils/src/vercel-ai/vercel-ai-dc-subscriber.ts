@@ -172,10 +172,10 @@ export interface VercelAiChannelMessage {
  * nested AI SDK operations (model calls, tool calls) become children of the enclosing span without
  * any manual parent bookkeeping here.
  */
-type VercelAiTracingChannelFactory = <T extends object>(name: string) => TracingChannel<T, T>;
+export type VercelAiTracingChannelFactory = <T extends object>(name: string) => TracingChannel<T, T>;
 
 /** Integration-level recording options, pinned at subscribe time so we never look the integration up per event. */
-interface VercelAiChannelOptions {
+export interface VercelAiChannelOptions {
   recordInputs?: boolean;
   recordOutputs?: boolean;
   enableTruncation?: boolean;
