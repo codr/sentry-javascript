@@ -6,7 +6,6 @@ import {
   _INTERNAL_setSpanForScope,
   _INTERNAL_startInactiveSpan,
   addChildSpanToSpan,
-  getCapturedScopesOnSpan,
   getCurrentScope,
   getDynamicSamplingContextFromSpan,
   getIsolationScope,
@@ -19,7 +18,6 @@ import {
 } from '@sentry/core';
 import type { Span, SpanAttributes, SpanLink } from '@sentry/core';
 import { applyOtelSpanData, applyOtelSpanKind } from './applyOtelSpanData';
-import { SENTRY_FORK_SET_ISOLATION_SCOPE_CONTEXT_KEY } from './constants';
 import { getSamplingDecision } from './utils/getSamplingDecision';
 
 export class SentryTracer implements Tracer {
@@ -68,12 +66,7 @@ export class SentryTracer implements Tracer {
     ) as F;
 
     const span = this.startSpan(name, options, ctx);
-    let ctxWithSpan = trace.setSpan(ctx, span);
-
-    const capturedIsolationScope = getCapturedScopesOnSpan(span as unknown as Span).isolationScope;
-    if (capturedIsolationScope) {
-      ctxWithSpan = ctxWithSpan.setValue(SENTRY_FORK_SET_ISOLATION_SCOPE_CONTEXT_KEY, capturedIsolationScope);
-    }
+    const ctxWithSpan = trace.setSpan(ctx, span);
 
     return context.with(ctxWithSpan, () => {
       _INTERNAL_setSpanForScope(getCurrentScope(), span as unknown as Span);
