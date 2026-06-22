@@ -46,12 +46,15 @@ export function applyOtelSpanData(span: Span, options: { finalizeStatus?: boolea
     span.setAttribute(SEMANTIC_ATTRIBUTE_SENTRY_OP, inferred.op);
   }
 
-  // Don't apply 'url' source at creation time — only at span end (finalizeStatus).
+  // Don't apply 'url' source at creation time, only at span end (finalizeStatus).
   // At creation, http.route may not be set yet, so inference falls back to 'url'.
   // Keeping the default 'custom' source from _startRootSpan allows
   // enhanceDscWithOpenTelemetryRootSpanName to include the transaction name in
   // the DSC. At span end, http.route is typically available and inference returns
   // 'route' instead. If it's still 'url', it's applied then.
+  // We also only set `source` on segment roots (spans that become transactions):
+  // those with no parent, plus SERVER spans, which are the segment root even when
+  // continuing a distributed trace (where they carry a remote `parent_span_id`).
   const shouldApplyInferredSource =
     inferred.source !== undefined &&
     inferred.source !== 'custom' &&
