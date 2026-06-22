@@ -107,7 +107,7 @@ In `@sentry/node`, this provider can be enabled with the experimental option:
 Sentry.init({
   dsn: 'xxx',
   _experiments: {
-    useSentryTraceProvider: true,
+    useSentryTracerProvider: true,
   },
 });
 ```
