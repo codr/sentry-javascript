@@ -85,7 +85,7 @@ export function applyOtelSpanData(span: Span, options: { finalizeStatus?: boolea
     inferred.description !== spanJSON.description &&
     (attributes[SEMANTIC_ATTRIBUTE_SENTRY_SOURCE] !== 'custom' || (mayInferSource && !hasCustomSpanName))
   ) {
-    addNonEnumerableProperty(span as Span & { _name?: string }, '_name', inferred.description);
+    span.updateName(inferred.description);
   }
 }
 
