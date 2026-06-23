@@ -23,3 +23,11 @@ export type {
   RedisTracingChannelFactory,
   RedisTracingChannelSubscribers,
 } from './redis/redis-dc-subscriber';
+
+export {
+  fastifyIntegration,
+  // oxlint-disable-next-line typescript/no-deprecated
+  handleFastifyError,
+  // oxlint-disable-next-line typescript/no-deprecated
+  instrumentFastifyV5,
+} from './integrations/tracing-channel/fastify';
