@@ -9,6 +9,9 @@
  * - Refactored to use Sentry's span APIs instead of OpenTelemetry tracing APIs
  * - Dropped the OTel metrics (no MeterProvider is wired up) and the dead
  *   `requireParentforSpans` code path (the SDK always passes `false`)
+ * - An orphan `http.client` span (no local parent) is created suppressed/non-recording outside of
+ *   span streaming, so it isn't emitted as a standalone transaction. It is still created so trace
+ *   propagation headers are injected.
  * - Dropped the `@opentelemetry/instrumentation` base (undici reports via `diagnostics_channel`,
  *   so no module patching was needed) — now a plain class wired up directly by the integration
  */
@@ -21,6 +24,7 @@ import {
   debug,
   getClient,
   getTraceData,
+  hasSpanStreamingEnabled,
   LRUMap,
   shouldPropagateTraceForUrl,
   SPAN_KIND,
@@ -242,10 +246,18 @@ export class UndiciInstrumentation {
       });
     }
 
+    // Outside of span streaming, only record an `http.client` span when it has a parent. An orphan
+    // one (no local parent) is left to the server for the downstream sampling decision: `onlyIfParent`
+    // still creates a non-recording span so trace propagation headers are injected, but it isn't
+    // emitted as a standalone transaction. This rule also lives in `SentrySampler`, but that only runs
+    // when an OpenTelemetry SDK tracer provider is set up, so we enforce it here too, which covers
+    // SDKs that don't use an OpenTelemetry tracer provider at all.
+    const client = getClient();
     const span = startInactiveSpan({
       name: requestMethod === '_OTHER' ? 'HTTP' : requestMethod,
       kind: SPAN_KIND.CLIENT,
       attributes,
+      onlyIfParent: !client || !hasSpanStreamingEnabled(client),
     });
 
     // Execute the request hook if defined
