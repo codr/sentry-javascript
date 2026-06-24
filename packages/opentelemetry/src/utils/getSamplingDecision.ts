@@ -5,8 +5,8 @@ import {
   baggageHeaderToDynamicSamplingContext,
   getRootSpan,
   hasSpansEnabled,
-  spanIsNonRecordingSpan,
   spanIsSampled,
+  spanIsSentrySpan,
 } from '@sentry/core';
 import { SENTRY_TRACE_STATE_DSC, SENTRY_TRACE_STATE_SAMPLED_NOT_RECORDING } from '../constants';
 
@@ -73,10 +73,12 @@ export function getSampledForPropagation(span: Span, client: Client | undefined)
     return samplingDecision;
   }
 
-  // No trace state — this is a native local span. Only read its own decision (`spanIsSampled`) when
-  // that decision is explicit: skip TwP (deferred), remote spans (decision is in the incoming trace
-  // state, incl. a deferred one), and non-recording placeholder roots (orphan/suppressed — deferred).
-  if (!hasSpansEnabled(client?.getOptions()) || spanContext.isRemote || spanIsNonRecordingSpan(getRootSpan(span))) {
+  // No trace state in it. Only read the span's own decision (`spanIsSampled`) when it's an explicit
+  // one, which lives on a native recording `SentrySpan` root (created by the SentryTracerProvider).
+  // Everything else defers: TwP (deferred), remote spans (decision is in the incoming trace state),
+  // and non-recording placeholder roots — whether a Sentry orphan/suppressed span or, on the OTel SDK
+  // path, an OpenTelemetry `NonRecordingSpan` (which `spanIsSentrySpan` also excludes).
+  if (!hasSpansEnabled(client?.getOptions()) || spanContext.isRemote || !spanIsSentrySpan(getRootSpan(span))) {
     return undefined;
   }
 

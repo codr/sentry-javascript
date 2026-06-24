@@ -97,6 +97,7 @@ export {
   spanToJSON,
   spanToStreamedSpanJSON,
   spanIsSampled,
+  spanIsSentrySpan,
   spanToTraceContext,
   getSpanDescendants,
   getStatusMessage,
