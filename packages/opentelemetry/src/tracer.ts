@@ -14,6 +14,7 @@ import {
   SEMANTIC_ATTRIBUTE_SENTRY_SOURCE,
   SentryNonRecordingSpan,
   setCapturedScopesOnSpan,
+  spanIsIgnored,
   startNewTrace,
   withScope,
 } from '@sentry/core';
@@ -68,6 +69,16 @@ export class SentryTracer implements Tracer {
     ) as F;
 
     const span = this.startSpan(name, options, ctx);
+
+    // Mirror core's `startSpan`: an ignored (`ignoreSpans`) span that has a parent must not become the
+    // active span. Otherwise its children would attach to it and, since it's non-recording, be dropped
+    // along with it (cascading the drop down the whole subtree). Leaving the parent active lets the
+    // children attach to it and get re-parented instead. An ignored root span has no parent and still
+    // becomes active, so its subtree is dropped as intended.
+    if (spanIsIgnored(span as unknown as Span) && trace.getSpan(ctx)) {
+      return context.with(ctx, () => callback(span)) as ReturnType<F>;
+    }
+
     let ctxWithSpan = trace.setSpan(ctx, span);
 
     // Run the span's callback under the isolation scope captured when the span was created, so scope state
