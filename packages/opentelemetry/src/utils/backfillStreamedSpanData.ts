@@ -1,9 +1,10 @@
-import { SpanKind } from '@opentelemetry/api';
 import type { SpanAttributes, StreamedSpanJSON } from '@sentry/core';
 import {
   safeSetSpanJSONAttributes,
   SEMANTIC_ATTRIBUTE_SENTRY_OP,
   SEMANTIC_ATTRIBUTE_SENTRY_SOURCE,
+  SPAN_KIND,
+  spanKindToName,
 } from '@sentry/core';
 import { inferSpanData } from './parseSpanDescription';
 
@@ -24,7 +25,7 @@ export function backfillStreamedSpanDataFromOtel(spanJSON: StreamedSpanJSON, hin
     return;
   }
 
-  const kind = hint?.spanKind ?? SpanKind.INTERNAL;
+  const kind = hint?.spanKind ?? SPAN_KIND.INTERNAL;
   const { op, description, source, data } = inferSpanData(spanJSON.name, attributes as unknown as SpanAttributes, kind);
 
   spanJSON.name = description;
@@ -35,9 +36,9 @@ export function backfillStreamedSpanDataFromOtel(spanJSON: StreamedSpanJSON, hin
     ...data,
   });
 
-  if (kind !== SpanKind.INTERNAL) {
+  if (kind !== SPAN_KIND.INTERNAL) {
     safeSetSpanJSONAttributes(spanJSON, {
-      'otel.kind': SpanKind[kind],
+      'otel.kind': spanKindToName(kind),
     });
   }
 }
