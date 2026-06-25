@@ -202,6 +202,37 @@ describe('wrapPromiseWithMethods', () => {
     expect(response).toBe(mockResponse);
   });
 
+  it('waits for the instrumented promise to settle before resolving .asResponse()', async () => {
+    const mockResponse = { status: 200, headers: new Map() };
+    const original = createMockAPIPromise('original-data', {
+      response: mockResponse,
+      request_id: 'req_123',
+    });
+
+    const settleOrder: string[] = [];
+    let resolveInstrumented!: (value: string) => void;
+    const instrumented = new Promise<string>(resolve => {
+      resolveInstrumented = resolve;
+    }).then(value => {
+      settleOrder.push('instrumented');
+      return value;
+    });
+
+    const wrapped = wrapPromiseWithMethods(original, instrumented, 'auto.ai.test');
+    const asResponsePromise = (wrapped as typeof original).asResponse().then(response => {
+      settleOrder.push('asResponse');
+      return response;
+    });
+
+    resolveInstrumented('instrumented-data');
+    const response = await asResponsePromise;
+
+    // The span (instrumented promise) must end before .asResponse() resolves, otherwise the
+    // gen_ai span can outlive its enclosing transaction and be dropped from it.
+    expect(response).toBe(mockResponse);
+    expect(settleOrder).toEqual(['instrumented', 'asResponse']);
+  });
+
   it('returns instrumentedPromise when original is not thenable', async () => {
     const instrumented = Promise.resolve('instrumented-data');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

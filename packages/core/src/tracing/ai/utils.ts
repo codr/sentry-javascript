@@ -298,6 +298,38 @@ async function createWithResponseWrapper<T>(
 }
 
 /**
+ * Creates a wrapped version of .asResponse() that waits for the instrumented promise to settle
+ * (ending the span) before returning the raw `Response`.
+ *
+ * Unlike .withResponse(), .asResponse() resolves to the raw `Response` without going through the
+ * instrumented (parsed) promise, so on its own it never waits for the span to end. The span would
+ * then end whenever the instrumentation's own parse happens to complete, which can be after the
+ * enclosing transaction has already been assembled, dropping the span from it. Awaiting the
+ * instrumented promise ties the span's end to the caller's `await`.
+ */
+async function createAsResponseWrapper(
+  originalAsResponse: Promise<unknown>,
+  instrumentedPromise: Promise<unknown>,
+  mechanismType: string,
+): Promise<unknown> {
+  // Attach the catch handler synchronously to prevent an unhandled rejection while we await below.
+  const safeOriginalAsResponse = originalAsResponse.catch(error => {
+    captureException(error, {
+      mechanism: {
+        handled: false,
+        type: mechanismType,
+      },
+    });
+    throw error;
+  });
+
+  // A rejected instrumented promise still ends the span (and its error is captured by the
+  // instrumentation), so swallow it here to not mask the raw `Response`.
+  await instrumentedPromise.catch(() => undefined);
+  return safeOriginalAsResponse;
+}
+
+/**
  * Wraps a promise-like object to preserve additional methods (like .withResponse())
  * that AI SDK clients (OpenAI, Anthropic) attach to their APIPromise return values.
  *
@@ -333,6 +365,15 @@ export function wrapPromiseWithMethods<R>(
         return function wrappedWithResponse(this: unknown): unknown {
           const originalWithResponse = (value as (...args: unknown[]) => unknown).call(target);
           return createWithResponseWrapper(originalWithResponse, instrumentedPromise, mechanismType);
+        };
+      }
+
+      // Special handling for .asResponse() so the span ends before the caller continues.
+      // .asResponse() returns the raw `Response` without going through the instrumented promise.
+      if (prop === 'asResponse' && typeof value === 'function') {
+        return function wrappedAsResponse(this: unknown): unknown {
+          const originalAsResponse = (value as (...args: unknown[]) => unknown).call(target);
+          return createAsResponseWrapper(originalAsResponse, instrumentedPromise, mechanismType);
         };
       }
 
