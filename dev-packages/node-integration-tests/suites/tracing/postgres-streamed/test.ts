@@ -73,8 +73,10 @@ const COMMON_DB_ATTRIBUTES = {
 
 /**
  * Builds the expected strict shape of a streamed postgres db span.
- * The `pg.connect` span has neither a `db.statement` nor a `sentry.origin`,
- * whereas query spans carry both.
+ * Query spans carry a `db.statement` and the `auto.db.otel.postgres` origin. The `pg.connect` span
+ * has no `db.statement`, and since the pg instrumentation sets no origin on it, it carries the
+ * default `manual` origin (written as an attribute on the streamed-span path; the non-streamed/SDK
+ * path omits the `manual` default).
  */
 function expectedDbSpan({ name, statement }: { name: string; statement?: string }): unknown {
   const attributes: Record<string, unknown> = { ...COMMON_DB_ATTRIBUTES };
@@ -87,6 +89,11 @@ function expectedDbSpan({ name, statement }: { name: string; statement?: string 
     attributes['sentry.origin'] = {
       type: 'string',
       value: 'auto.db.otel.postgres',
+    };
+  } else {
+    attributes['sentry.origin'] = {
+      type: 'string',
+      value: 'manual',
     };
   }
 

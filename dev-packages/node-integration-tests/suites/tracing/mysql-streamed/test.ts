@@ -52,6 +52,13 @@ describe('mysql auto instrumentation (streamed)', () => {
         type: 'string',
         value: 'db',
       },
+      // The `mysql` (v1) instrumentation sets no explicit span origin, so these spans carry the
+      // default `manual` origin. The streamed-span path writes it as a first-class attribute (the
+      // non-streamed/SDK path omits the `manual` default, which is why this wasn't asserted before).
+      'sentry.origin': {
+        type: 'string',
+        value: 'manual',
+      },
       'sentry.release': {
         type: 'string',
         value: '1.0',
