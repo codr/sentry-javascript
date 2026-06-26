@@ -38,10 +38,12 @@ describe.each([
   const nodeVersion = NODE_VERSION.major;
   const failsOnCjs = version === '7' && nodeVersion === 18;
 
+  const useOrchestrion = env.USE_ORCHESTRION === 'true';
+  const usesChannels = version === '7' || useOrchestrion;
+
   // in v7 and orchestrion mode, we use the channel-based integration
   // else, we use the OTel processor
-  const expectedOrigin =
-    version === '7' || env.USE_ORCHESTRION === 'true' ? 'auto.vercelai.channel' : 'auto.vercelai.otel';
+  const expectedOrigin = usesChannels ? 'auto.vercelai.channel' : 'auto.vercelai.otel';
 
   // We only run this in ESM and CJS to verify full support
   // Other suites we only run in ESM to simplify the test setup
@@ -238,10 +240,10 @@ describe.each([
               // On v6, vercel AI natively defaults to recording inputs and outputs by default when telemetry is enabled
               // On v7, we do not have access to this, so this defaults to false in this case
               expect(secondInvokeAgentSpan.attributes?.[GEN_AI_INPUT_MESSAGES_ATTRIBUTE]?.value).toEqual(
-                version === '6' ? '[{"role":"user","content":"Where is the second span?"}]' : undefined,
+                !usesChannels ? '[{"role":"user","content":"Where is the second span?"}]' : undefined,
               );
               expect(secondInvokeAgentSpan.attributes?.[GEN_AI_OUTPUT_MESSAGES_ATTRIBUTE]?.value).toEqual(
-                version === '6'
+                !usesChannels
                   ? '[{"role":"assistant","parts":[{"type":"text","content":"Second span here!"}],"finish_reason":"stop"}]'
                   : undefined,
               );

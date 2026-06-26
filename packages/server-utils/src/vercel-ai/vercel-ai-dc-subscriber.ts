@@ -95,9 +95,19 @@ export function clearOperationId(data: VercelAiChannelMessage): void {
   }
   const callId = asString(data.event.callId);
   if (callId) {
-    operationIdByCallId.delete(callId);
-    toolDescriptionsByCallId.delete(callId);
+    clearOperationCallId(callId);
   }
+}
+
+/**
+ * Drop the per-operation `callId` maps for a single id. The v6 orchestrion adapter uses this to clear a
+ * `streamText` operation only after its lazily-run model call settles — the operation's own span ends
+ * synchronously (when `streamText` returns) but the model call runs later as the stream is consumed, and
+ * it still needs the operation's `operationId`/`isStream` entry to name itself `ai.streamText.doStream`.
+ */
+export function clearOperationCallId(callId: string): void {
+  operationIdByCallId.delete(callId);
+  toolDescriptionsByCallId.delete(callId);
 }
 
 /** Record tool name → description from an event's `tools`, so tool spans can backfill the description. */
