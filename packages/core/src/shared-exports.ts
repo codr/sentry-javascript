@@ -51,7 +51,8 @@ export {
 export { getDefaultCurrentScope, getDefaultIsolationScope } from './defaultScopes';
 export {
   setAsyncContextStrategy,
-  getTracingChannelBinding as _INTERNAL_getTracingChannelBinding,
+  getAsyncContextStrategy,
+  waitForTracingChannelBinding,
   _INTERNAL_createTracingChannelBinding,
 } from './asyncContext';
 export { getGlobalSingleton, getMainCarrier } from './carrier';

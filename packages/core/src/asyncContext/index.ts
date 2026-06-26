@@ -33,10 +33,28 @@ export function getAsyncContextStrategy(carrier: Carrier): AsyncContextStrategy 
 }
 
 /**
- * Get the runtime binding needed to connect tracing channels to async context.
+ * Execute a callback whenever the tracing channel binding is available.
+ * If it is not available after retry, the callback is not executed.
  */
-export function getTracingChannelBinding(): TracingChannelBinding | undefined {
-  return getAsyncContextStrategy(getMainCarrier()).getTracingChannelBinding?.();
+export function waitForTracingChannelBinding(callback: () => void, retries = 1): void {
+  const binding = getAsyncContextStrategy(getMainCarrier()).getTracingChannelBinding?.();
+
+  if (binding) {
+    callback();
+    return;
+  }
+
+  if (!retries) {
+    return;
+  }
+
+  // It is possible that the binding is not available yet when this is initially called
+  // This happens when users use a custom OTEL setup
+  // In this case, we wait for a tick and try again afterwards
+  // If it still fails, we bail and do nothing
+  setTimeout(() => {
+    waitForTracingChannelBinding(callback, retries - 1);
+  }, 1);
 }
 
 /**
